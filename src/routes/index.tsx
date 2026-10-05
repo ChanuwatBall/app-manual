@@ -1,21 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import AddLineOaBanner from "../images/add-lineoa.png";
-import AppleLogo from "../images/apple-logo.png";
-import PlayStoreLogo from "../images/playtore-logo.png";
-import ContactImage from "../images/screen/Contact.png";
-import GeofencesImage from "../images/screen/Geofences.png";
-import HistoryImage from "../images/screen/History.png";
-import HomeImage from "../images/screen/Home.png";
-import LoginImage from "../images/screen/Login.png";
+import AddLineOaBanner from "../assets/images/add-lineoa.png";
+import AppleLogo from "../assets/images/apple-logo.png";
+import PlayStoreLogo from "../assets/images/playtore-logo.png";
+import ContactImage from "../assets/images/screen/Contact.png";
+import GeofencesImage from "../assets/images/screen/Geofences.png";
+import HistoryImage from "../assets/images/screen/History.png";
+import HomeImage from "../assets/images/screen/Home.png";
+import LoginImage from "../assets/images/screen/Login.png";
 import WebIcon from "../assets/images/icon.svg";
-import MapCardsVehiclesImage from "../images/screen/Map_Cards_Vehicles.png";
-import MapScreenImage from "../images/screen/Map_Screen.png";
-import NotificationsImage from "../images/screen/Notifications.png";
-import ReportSummaryImage from "../images/screen/Report_Summary.png";
-import ReportTemperatureImage from "../images/screen/Report_Temperture.png";
-import ReportTripsImage from "../images/screen/Report_Trips.png";
-import VehicleDetailImage from "../images/screen/Vehicle_Detail.png";
-import VehicleSensorsImage from "../images/screen/Vehicle_Sensors.jpg";
+import MapCardsVehiclesImage from "../assets/images/screen/Map_Cards_Vehicles.png";
+import MapScreenImage from "../assets/images/screen/Map_Screen.png";
+import NotificationsImage from "../assets/images/screen/Notifications.png";
+import ReportSummaryImage from "../assets/images/screen/Report_Summary.png";
+import ReportTemperatureImage from "../assets/images/screen/Report_Temperture.png";
+import ReportTripsImage from "../assets/images/screen/Report_Trips.png";
+import VehicleDetailImage from "../assets/images/screen/Vehicle_Detail.png";
+import VehicleSensorsImage from "../assets/images/screen/Vehicle_Sensors.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
