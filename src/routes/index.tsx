@@ -3,6 +3,7 @@ import AddLineOaBanner from "../assets/images/add-lineoa.png";
 import AppleLogo from "../assets/images/apple-logo.png";
 import PlayStoreLogo from "../assets/images/playtore-logo.png";
 import ContactImage from "../assets/images/screen/Contact.png";
+import DocumentsCurrentImage from "../assets/images/screen/Documents_Current.jpg";
 import GeofencesImage from "../assets/images/screen/Geofences.png";
 import HistoryImage from "../assets/images/screen/History.png";
 import HomeImage from "../assets/images/screen/Home.png";
@@ -10,7 +11,10 @@ import LoginImage from "../assets/images/screen/Login.png";
 import WebIcon from "../assets/images/icon.svg";
 import MapCardsVehiclesImage from "../assets/images/screen/Map_Cards_Vehicles.png";
 import MapScreenImage from "../assets/images/screen/Map_Screen.png";
+import MdvrCurrentImage from "../assets/images/screen/MDVR_Current.jpg";
+import MdvrLiveCurrentImage from "../assets/images/screen/MDVR_Live_Current.jpg";
 import NotificationsImage from "../assets/images/screen/Notifications.png";
+import ExpiredOfflineWarningImage from "../assets/images/screen/Popup_Warnning_ExpiredOffline.jpg";
 import ReportSummaryImage from "../assets/images/screen/Report_Summary.png";
 import ReportTemperatureImage from "../assets/images/screen/Report_Temperture.png";
 import ReportTripsImage from "../assets/images/screen/Report_Trips.png";
@@ -52,6 +56,8 @@ const IMG = {
   login: LoginImage,
   map: MapScreenImage,
   info: MapCardsVehiclesImage,
+  mdvr: MdvrCurrentImage,
+  mdvrLive: MdvrLiveCurrentImage,
   fleet: HomeImage,
   playback: HistoryImage,
   trip: ReportTripsImage,
@@ -59,6 +65,8 @@ const IMG = {
   temp: ReportTemperatureImage,
   fuel: ReportSummaryImage,
   notif: NotificationsImage,
+  expiredOfflineWarning: ExpiredOfflineWarningImage,
+  documents: DocumentsCurrentImage,
   diag: VehicleDetailImage,
   sensor: VehicleSensorsImage,
   contact: ContactImage,
@@ -362,6 +370,126 @@ function Index() {
               />
             </div>
           </div>
+
+          {/* Expired and offline alerts */}
+          <section id="device-alerts" className="glass-card p-6 rounded-xl space-y-6">
+            <div className="flex items-center gap-3 text-secondary border-b border-outline-variant pb-4">
+              <Icon name="warning" />
+              <h3 className="text-xl font-semibold">แจ้งเตือนอุปกรณ์หมดอายุและออฟไลน์</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_220px] gap-6 items-start">
+              <div className="space-y-4 text-on-surface-variant">
+                <p>
+                  เมื่อเปิดแอป ระบบอาจแสดงหน้าต่างแจ้งเตือนเพื่อให้ตรวจสอบอุปกรณ์ที่ต้องดำเนินการ
+                  โดยแบ่งเป็น 2 แท็บ ได้แก่ <strong>หมดอายุ</strong> และ <strong>ออฟไลน์</strong>
+                </p>
+                <ol className="list-decimal list-inside space-y-2 ml-2">
+                  <li>เลือกแท็บที่ต้องการตรวจสอบ</li>
+                  <li>อ่านชื่อรถและวันที่ครบกำหนดในรายการ</li>
+                  <li>หากอุปกรณ์หมดอายุ ให้ติดต่อทีม Andaman GPS ตามช่องทางที่แสดงในหน้าต่าง</li>
+                  <li>
+                    เลือก <strong>ไม่แสดงอีก (14 วัน)</strong> เพื่อซ่อนการแจ้งเตือนชั่วคราว หรือ
+                    เลือก <strong>ปิดวันนี้</strong> เพื่อปิดเฉพาะครั้งนี้
+                  </li>
+                </ol>
+                <div className="bg-secondary-fixed text-on-secondary-fixed p-4 rounded-lg border-l-4 border-secondary flex gap-3">
+                  <Icon name="info" className="shrink-0" />
+                  <p className="text-sm">
+                    การปิดหน้าต่างเป็นเพียงการซ่อนข้อความแจ้งเตือน ไม่ได้ต่ออายุบริการหรือแก้ไขสถานะ
+                    การเชื่อมต่อของอุปกรณ์
+                  </p>
+                </div>
+              </div>
+              <img
+                src={IMG.expiredOfflineWarning}
+                alt="หน้าต่างแจ้งเตือนอุปกรณ์หมดอายุและออฟไลน์"
+                className="w-full max-w-[220px] mx-auto rounded-xl border border-outline-variant shadow-lg"
+              />
+            </div>
+          </section>
+
+          {/* MDVR */}
+          <section id="mdvr" className="glass-card p-6 rounded-xl space-y-6">
+            <div className="flex items-center gap-3 text-primary border-b border-outline-variant pb-4">
+              <Icon name="videocam" />
+              <h3 className="text-xl font-semibold">MDVR — กล้องถ่ายทอดสด</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)] gap-6 items-start">
+              <div className="space-y-4">
+                <figure>
+                  <img
+                    src={IMG.mdvr}
+                    alt="หน้าจอเลือกรถสำหรับ MDVR"
+                    className="w-full max-w-[260px] mx-auto rounded-xl border border-outline-variant shadow-lg"
+                  />
+                  <figcaption className="text-center text-sm text-on-surface-variant mt-2">เลือกรถที่ติดตั้ง MDVR</figcaption>
+                </figure>
+                <figure>
+                  <img
+                    src={IMG.mdvrLive}
+                    alt="หน้าจอกล้อง MDVR ถ่ายทอดสด"
+                    className="w-full max-w-[260px] mx-auto rounded-xl border border-outline-variant shadow-lg"
+                  />
+                  <figcaption className="text-center text-sm text-on-surface-variant mt-2">ตัวอย่างหน้าจอกล้องถ่ายทอดสด</figcaption>
+                </figure>
+              </div>
+              <div className="space-y-4 text-on-surface-variant">
+                <p>
+                  เปิดเมนูด้านข้าง แล้วเลือก <strong>MDVR</strong> จากนั้นแตะทะเบียนรถที่ต้องการเพื่อเปิดหน้า
+                  <strong>กล้องถ่ายทอดสด</strong>
+                </p>
+                <ol className="list-decimal list-inside space-y-2 ml-2">
+                  <li>ตรวจสอบสถานะอุปกรณ์ จำนวนกล้อง และรหัสอุปกรณ์ที่แสดงด้านบน</li>
+                  <li>เลือกแท็บ <strong>แผงควบคุม</strong> เพื่อดูวิดีโอ หรือ <strong>แผนที่</strong> เพื่อดูตำแหน่งรถ</li>
+                  <li>เลือกรูปแบบการแสดงผล 1 ช่อง, 4 ช่อง หรือ 9 ช่อง ตามจำนวนกล้องที่ต้องการดู</li>
+                  <li>เลือกคุณภาพวิดีโอ <strong>ประหยัดอินเทอร์เน็ต</strong> หรือ <strong>สูง</strong></li>
+                  <li>แตะ CH1, CH2, CH3 หรือ CH4 เพื่อเลือกช่องกล้อง และใช้ปุ่มเต็มหน้าจอเมื่อต้องการขยายภาพ</li>
+                </ol>
+                <div className="bg-secondary-fixed text-on-secondary-fixed p-4 rounded-lg border-l-4 border-secondary flex gap-3">
+                  <Icon name="wifi" className="shrink-0" />
+                  <p className="text-sm">
+                    รายการจะแสดงเฉพาะรถที่ติดตั้งและพร้อมใช้งานกับกล้อง MDVR หากไม่พบรถ ให้ตรวจสอบการเชื่อมต่อของอุปกรณ์ก่อน
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Documents */}
+          <section id="documents" className="glass-card p-6 rounded-xl space-y-6">
+            <div className="flex items-center gap-3 text-primary border-b border-outline-variant pb-4">
+              <Icon name="description" />
+              <h3 className="text-xl font-semibold">เอกสารการชำระเงินและการรับประกัน</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-6 items-start">
+              <img
+                src={IMG.documents}
+                alt="หน้าจอเมนูเอกสาร"
+                className="w-full max-w-[220px] mx-auto rounded-xl border border-outline-variant shadow-lg"
+              />
+              <div className="space-y-4 text-on-surface-variant">
+                <p>
+                  เปิดเมนูด้านข้าง แล้วเลือก <strong>เอกสาร</strong> เพื่อดูข้อมูลเอกสารของบัญชี
+                  จากหน้าจอนี้สามารถเลือกหัวข้อที่ต้องการได้ทันที
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    ["ใบแจ้งชำระ", "ดูรายการที่รอชำระ โดยตัวเลขด้านขวาคือจำนวนใบแจ้งชำระปัจจุบัน"],
+                    ["ประวัติใบเสร็จการชำระ", "ตรวจสอบรายการชำระเงินที่ดำเนินการแล้ว"],
+                    ["การรับประกัน", "ดูรายละเอียดการรับประกันของอุปกรณ์หรือบริการ"],
+                  ].map(([title, desc]) => (
+                    <li key={title} className="flex gap-3 p-3 rounded-lg bg-surface-container-low border border-outline-variant">
+                      <Icon name="chevron_right" className="text-primary shrink-0" />
+                      <span>
+                        <strong className="text-foreground">{title}</strong>
+                        <span className="block text-sm mt-1">{desc}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
         </section>
 
         {/* Troubleshooting */}
@@ -507,7 +635,7 @@ function Index() {
           { href: "#intro", icon: "info", label: "แนะนำ", active: true },
           { href: "#features", icon: "gps_fixed", label: "ฟีเจอร์" },
           { href: "#support", icon: "help_outline", label: "ช่วยเหลือ" },
-          { href: "#troubleshooting", icon: "notifications", label: "แจ้งเตือน" },
+          { href: "#device-alerts", icon: "notifications", label: "แจ้งเตือน" },
         ].map((n) => (
           <a
             key={n.label}
