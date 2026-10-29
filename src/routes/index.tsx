@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import type { CSSProperties } from "react";
 import AddLineOaBanner from "../assets/images/add-lineoa.png";
 import AppleLogo from "../assets/images/apple-logo.png";
 import PlayStoreLogo from "../assets/images/playtore-logo.png";
@@ -21,7 +23,65 @@ import ReportTripsImage from "../assets/images/screen/Report_Trips.png";
 import VehicleDetailImage from "../assets/images/screen/Vehicle_Detail.png";
 import VehicleSensorsImage from "../assets/images/screen/Vehicle_Sensors.jpg";
 
+type Company = "andaman" | "universe" | "evdd" | "atdigital";
+
+type CompanyConfig = {
+  contact: {
+    name: string;
+    logo?: string | null;
+    color?: string | null;
+    colorSecond?: string | null;
+    primaryShade?: string | null;
+    primaryTint?: string | null;
+    secondaryShade?: string | null;
+    secondaryTint?: string | null;
+    telephone?: Array<{ number?: string | null }> | null;
+    facebookUrl?: string | null;
+    lineOa?: string | null;
+    website?: string | null;
+    websiteContact?: string | null;
+  };
+  version?: string | null;
+};
+
+const COMPANY_ENDPOINTS: Record<Company, string> = {
+  andaman: "https://mobileapp-s1.andamantracking.dev/app/v2-3/index",
+  universe: "https://mobileappv2-universe.attg.cc/app/v2-3/index",
+  evdd: "https://api-evddtransport.attg.cc/app/v2-3/index" ,
+  atdigital: "https://atmobileappv2.attg.cc/app/v2-3/index"
+};
+
+const getCompanyConfig = createServerFn({ method: "GET" })
+  .inputValidator((data: { company: Company }) => data)
+  .handler(async ({ data }) => {
+    const response = await fetch(COMPANY_ENDPOINTS[data.company], {
+      method: "POST",
+      headers: { Accept: "application/json" },
+    });
+    console.log("/index response: ",response)
+
+    if (!response.ok) {
+      throw new Error(`Unable to load ${data.company} configuration (${response.status})`);
+    }
+
+    return (await response.json()) as CompanyConfig;
+  });
+
 export const Route = createFileRoute("/")({
+  validateSearch: (search): { company?: Company } => ({
+    company:
+      search.company === "andaman" ||
+      search.company === "universe" ||
+      search.company === "atdigital" ||
+      search.company === "evdd"
+        ? search.company
+        : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ company: search.company ?? "andaman" }),
+  loader: async ({ deps }) => ({
+    company: deps.company,
+    config: await getCompanyConfig({ data: { company: deps.company } }),
+  }),
   head: () => ({
     meta: [
       { title: "คู่มือ Andaman GPS — เอกสารระบบติดตามยานพาหนะ" },
@@ -72,19 +132,24 @@ const IMG = {
   contact: ContactImage,
 };
 
-const DOWNLOAD_URLS = {
-  android: "https://play.google.com/store/apps/details?id=at.andamantracking.dev",
-  ios: "https://apps.apple.com/us/app/%E0%B8%AD-%E0%B8%99%E0%B8%94%E0%B8%B2%E0%B8%A1-%E0%B8%99-%E0%B9%81%E0%B8%97%E0%B8%A3-%E0%B8%84%E0%B8%81-%E0%B8%87/id1513508217#?platform=iphone",
-  lineOa: "https://lin.ee/Yx1EQ1r",
-};
-
-const QRCODE_URLS = {
-  android: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
-    DOWNLOAD_URLS.android,
-  )}`,
-  ios: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
-    DOWNLOAD_URLS.ios,
-  )}`,
+const DOWNLOAD_URLS: Record<Company, { android: string; ios: string }> = {
+  andaman: {
+    android: "https://play.google.com/store/apps/details?id=at.andamantracking.dev",
+    ios: "https://apps.apple.com/us/app/%E0%B8%AD-%E0%B8%99%E0%B8%94%E0%B8%B2%E0%B8%A1-%E0%B8%99-%E0%B9%81%E0%B8%97%E0%B8%A3-%E0%B8%84%E0%B8%81-%E0%B8%87/id1513508217#?platform=iphone",
+  },
+  universe: {
+    android: "https://play.google.com/store/apps/details?id=at.universe.dev",
+    ios: "https://apps.apple.com/app/id1517367415",
+  },
+  atdigital: {
+    android:
+      "https://play.google.com/store/apps/details?id=at.atdigital.dev&pcampaignid=web_share",
+    ios: "https://apps.apple.com/th/app/%E0%B9%80%E0%B8%AD%E0%B8%97-%E0%B8%94-%E0%B8%88-%E0%B8%95-%E0%B8%A5/id1517361363?l=th",
+  },
+  evdd: {
+    android: "https://play.google.com/store/apps/details?id=at.evdd.dev&pcampaignid=web_share",
+    ios: "https://apps.apple.com/th/app/ev-dd-carboncredit/id6748892910?l=th",
+  },
 };
 
 const VERSION_URLS = {
@@ -103,12 +168,40 @@ function Icon({ name, className = "" }: { name: string; className?: string }) {
 }
 
 function Index() {
+  const { company, config } = Route.useLoaderData();
+  console.log("Index config  ",config)
+  const contact = config.contact;
+  const downloadUrls = DOWNLOAD_URLS[company];
+  const qrCodeUrls = {
+    android: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(downloadUrls.android)}`,
+    ios: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(downloadUrls.ios)}`,
+  };
+  const phoneNumbers = (contact.telephone ?? [])
+    .map(({ number }) => number?.trim())
+    .filter((number): number is string => Boolean(number));
+  const contactUrl = contact.websiteContact ?? contact.website;
+  const brandStyles = {
+    ...(contact.color ? { "--primary": contact.color } : {}),
+    ...(contact.colorSecond ? { "--secondary": contact.colorSecond } : {}),
+    ...(contact.primaryShade ? { "--primary-container": contact.primaryShade } : {}),
+    ...(contact.primaryTint ? { "--primary-fixed": contact.primaryTint } : {}),
+    ...(contact.secondaryShade ? { "--secondary-container": contact.secondaryShade } : {}),
+    ...(contact.secondaryTint ? { "--secondary-fixed": contact.secondaryTint } : {}),
+  } as CSSProperties;
+
   return (
-    <div className="bg-background text-foreground min-h-screen">
+    <div className="bg-background text-foreground min-h-screen" style={brandStyles}>
       {/* Top App Bar */}
       <header className="fixed top-0 w-full z-50 bg-surface border-b border-outline-variant h-14 flex justify-between items-center px-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-bold text-primary">Andaman GPS Manual</h1>
+          {contact.logo && (
+            <img
+              src={contact.logo}
+              alt={`${contact.name} logo`}
+              className="h-8 w-8 rounded object-contain"
+            />
+          )}
+          <h1 className="text-lg font-bold text-primary">{contact.name} Manual</h1>
         </div>
         <select
           defaultValue="current"
@@ -134,7 +227,7 @@ function Index() {
               <Icon name="gps_fixed" className="!text-[160px]" />
             </div>
             <h2 className="text-3xl md:text-4xl font-semibold mb-4 tracking-tight">
-              ยินดีต้อนรับสู่ Andaman GPS
+              ยินดีต้อนรับสู่ {contact.name}
             </h2>
             <p className="text-lg opacity-90 max-w-prose">
               ยกระดับงานโลจิสติกส์ของคุณด้วยระบบเทเลเมติกส์ความแม่นยำสูง
@@ -181,7 +274,7 @@ function Index() {
                 ทำตามขั้นตอนต่อไปนี้เพื่อเข้าใช้งานแดชบอร์ด:
               </p>
               <ol className="list-decimal list-inside space-y-3 text-on-surface-variant ml-2">
-                <li>เปิดแอป Andaman GPS บนมือถือ</li>
+                <li>เปิดแอป {contact.name} บนมือถือ</li>
                 <li>
                   <strong>เลือกเซิร์ฟเวอร์:</strong> เลือกเซิร์ฟเวอร์ที่ได้รับมอบหมาย
                   (server1, server2 หรือ server3)
@@ -205,7 +298,7 @@ function Index() {
             <div className="rounded-xl overflow-hidden shadow-xl border border-outline-variant">
               <img
                 src={IMG.login}
-                alt="หน้าจอเข้าสู่ระบบ Andaman GPS"
+                alt={`หน้าจอเข้าสู่ระบบ ${contact.name}`}
                 className="w-full object-cover aspect-[0.45]"
               />
             </div>
@@ -386,7 +479,7 @@ function Index() {
                 <ol className="list-decimal list-inside space-y-2 ml-2">
                   <li>เลือกแท็บที่ต้องการตรวจสอบ</li>
                   <li>อ่านชื่อรถและวันที่ครบกำหนดในรายการ</li>
-                  <li>หากอุปกรณ์หมดอายุ ให้ติดต่อทีม Andaman GPS ตามช่องทางที่แสดงในหน้าต่าง</li>
+                  <li>หากอุปกรณ์หมดอายุ ให้ติดต่อทีม {contact.name} ตามช่องทางที่แสดงในหน้าต่าง</li>
                   <li>
                     เลือก <strong>ไม่แสดงอีก (14 วัน)</strong> เพื่อซ่อนการแจ้งเตือนชั่วคราว หรือ
                     เลือก <strong>ปิดวันนี้</strong> เพื่อปิดเฉพาะครั้งนี้
@@ -542,14 +635,27 @@ function Index() {
             การตั้งค่า และคำถามด้านเทคนิคทุกประเภท
           </p>
           <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-            <img src={IMG.contact} alt="แบบฟอร์มติดต่อ" className="w-48 rounded-lg shadow-xl" />
+            <img
+              src={IMG.contact}
+              alt={`ช่องทางติดต่อ ${contact.name}`}
+              className="w-48 rounded-lg shadow-xl"
+            />
             <div className="text-left space-y-4">
-              <button className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-bold w-full md:w-auto hover:opacity-80 transition-opacity">
-                เปิดแบบฟอร์มติดต่อ
-              </button>
-              <p className="text-sm text-on-surface-variant italic">
-                อีเมลโดยตรง: support@andamangps.com
-              </p>
+              {contactUrl && (
+                <a
+                  href={contactUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex bg-primary text-primary-foreground px-8 py-3 rounded-full font-bold w-full md:w-auto hover:opacity-80 transition-opacity"
+                >
+                  เปิดแบบฟอร์มติดต่อ
+                </a>
+              )}
+              {phoneNumbers.length > 0 && (
+                <p className="text-sm text-on-surface-variant italic">
+                  โทร: {phoneNumbers.join(", ")}
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -573,12 +679,12 @@ function Index() {
               <div className="p-5 text-center space-y-4">
                 <p className="text-sm text-on-surface-variant">สแกน QR เพื่อติดตั้งบนมือถือ Android</p>
                 <img
-                  src={QRCODE_URLS.android}
+                  src={qrCodeUrls.android}
                   alt="QR Code ดาวน์โหลดแอป Android"
                   className="mx-auto w-44 h-44 rounded-lg   border-outline-variant bg-white p-2"
                 />
                 <a
-                  href={DOWNLOAD_URLS.android}
+                  href={downloadUrls.android}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-full  px-5 py-2 font-semibold hover:opacity-90 transition-opacity"
@@ -598,12 +704,12 @@ function Index() {
               <div className="p-5 text-center space-y-4">
                 <p className="text-sm text-on-surface-variant">สแกน QR เพื่อติดตั้งบน iPhone</p>
                 <img
-                  src={QRCODE_URLS.ios}
+                  src={qrCodeUrls.ios}
                   alt="QR Code ดาวน์โหลดแอป iOS"
                   className="mx-auto w-44 h-44 rounded-lg   border-outline-variant bg-white p-2"
                 />
                 <a
-                  href={DOWNLOAD_URLS.ios}
+                  href={downloadUrls.ios}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-full  px-5 py-2 font-semibold hover:opacity-90 transition-opacity"
@@ -614,18 +720,20 @@ function Index() {
             </article>
           </div>
 
-          <div className=" p-4 rounded-xl   border-outline-variant space-y-4">
-            {/* <h3 className="font-semibold text-lg text-primary flex items-center gap-2">
+          {contact.lineOa && (
+            <div className=" p-4 rounded-xl   border-outline-variant space-y-4">
+              {/* <h3 className="font-semibold text-lg text-primary flex items-center gap-2">
               <Icon name="chat" /> เพิ่มเพื่อน Line OA
             </h3> */}
-            <a href={DOWNLOAD_URLS.lineOa} target="_blank" rel="noreferrer" className="block">
-              <img
-                src={AddLineOaBanner}
-                alt="แบนเนอร์เพิ่มเพื่อน Line OA"
-                className="w-full  border border-outline-variant shadow"
-              />
-            </a> 
-          </div>
+              <a href={contact.lineOa} target="_blank" rel="noreferrer" className="block">
+                <img
+                  src={AddLineOaBanner}
+                  alt="แบนเนอร์เพิ่มเพื่อน Line OA"
+                  className="w-full  border border-outline-variant shadow"
+                />
+              </a>
+            </div>
+          )}
         </section>
       </main>
 
