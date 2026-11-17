@@ -1,3 +1,6 @@
+import PhuketBranchPhoto from "../assets/images/branches/ภูเก็ต.png";
+import KoratBranchPhoto from "../assets/images/branches/โคราช.png";
+
 export type BranchRegion = "south" | "central" | "north" | "northeast";
 
 export type Branch = {
@@ -25,7 +28,8 @@ export const branches: Branch[] = [
     lng: 98.34514081,
     address:
       "55/137 หมู่บ้านสมบูรณ์ทรัพย์ วิลเลจ หมู่ 8 ตำบลศรีสุนทร อำเภอถลาง จังหวัดภูเก็ต 83110",
-    phone: "086-688-5686",
+    phone: "087-564-9796",
+    photo: PhuketBranchPhoto,
   },
   {
     id: "surat",
@@ -125,6 +129,7 @@ export const branches: Branch[] = [
     address:
       "โครงการหมู่บ้านดิเอ็มไพร์ บ้านเลขที่ 444/20 ม.4 ตำบลปรุใหญ่ อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา 30000",
     phone: "094-2155873",
+    photo: KoratBranchPhoto,
   },
 ];
 

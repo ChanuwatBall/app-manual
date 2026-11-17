@@ -242,17 +242,20 @@
   padding: 6px 18px 16px;
 }
 .fullscreen-branches .compact-office .office-detail-banner {
-  display: flex;
-  margin: 0 14px 12px;
-  border-radius: 14px;
-  min-height: 110px;
-  padding: 18px;
+  display: block;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .compact-office .office-detail-banner img {
+  display: block;
   width: 100%;
-  max-height: 180px;
+  height: 220px;
+  max-height: none;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: 0;
 }
 .compact-office .office-region-chip {
   display: inline-block;
@@ -316,6 +319,17 @@
 }
 .fullscreen-branches .compact-office .office-overview {
   margin-top: 10px;
+}
+@media (min-width: 861px) {
+  .branches-page .fullscreen-branches .office-detail.compact-office {
+    top: 24px;
+    bottom: 24px;
+    max-height: none;
+  }
+  .compact-office .office-sheet-handle,
+  .compact-office .office-expand {
+    display: none;
+  }
 }
 @media (max-width: 860px) {
   .branches-page .fullscreen-branches .office-detail.compact-office {
@@ -920,7 +934,8 @@
   min-height: 560px;
 }
 .three-map-canvas {
-  touch-action: pan-y;
+  /* Keep pinch gestures inside the 3D map instead of triggering browser zoom. */
+  touch-action: none;
 }
 .branch-map-scene {
   display: none;

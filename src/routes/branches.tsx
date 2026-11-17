@@ -87,6 +87,20 @@ function BranchMap({
   const [expandedId, setExpandedId] = useState("");
   const expanded = Boolean(branch && expandedId === branch.id);
   const toggleDetails = () => setExpandedId(expanded ? "" : activeBranch);
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia("(min-width: 861px)");
+    const expandOnDesktop = () => {
+      if (desktopQuery.matches && activeBranch) {
+        setExpandedId(activeBranch);
+      }
+    };
+
+    expandOnDesktop();
+    desktopQuery.addEventListener("change", expandOnDesktop);
+    return () => desktopQuery.removeEventListener("change", expandOnDesktop);
+  }, [activeBranch]);
+
   const selectAdjacent = (offset: number) => {
     const index = branches.findIndex((item) => item.id === activeBranch);
     setExpandedId("");
@@ -292,25 +306,80 @@ function ThreeBranchMap({
       rings.slice(1).forEach((ring) => shape.holes.push(new THREE.Path(points(ring))));
       return shape;
     });
-    const country = new THREE.Mesh(
-      new THREE.ExtrudeGeometry(shapes, {
-        depth: 0.55,
-        bevelEnabled: true,
-        bevelThickness: 0.1,
-        bevelSize: 0.08,
-        bevelSegments: 3,
+    // A lightweight procedural relief texture gives the raised Thailand object
+    // visible terrain variation without adding a large raster-map dependency.
+    const terrainCanvas = document.createElement("canvas");
+    terrainCanvas.width = 512;
+    terrainCanvas.height = 512;
+    const terrainContext = terrainCanvas.getContext("2d");
+    if (!terrainContext) return;
+    const terrainPixels = terrainContext.createImageData(terrainCanvas.width, terrainCanvas.height);
+    for (let y = 0; y < terrainCanvas.height; y++) {
+      for (let x = 0; x < terrainCanvas.width; x++) {
+        const elevation =
+          0.5 +
+          Math.sin(x * 0.043 + y * 0.009) * 0.17 +
+          Math.sin(y * 0.064 - x * 0.014) * 0.14 +
+          Math.sin(Math.hypot(x - 132, y - 156) * 0.085) * 0.1 +
+          Math.sin(Math.hypot(x - 365, y - 326) * 0.055) * 0.09;
+        const shade = THREE.MathUtils.clamp(elevation, 0, 1);
+        const pixel = (y * terrainCanvas.width + x) * 4;
+        terrainPixels.data[pixel] = 20 + shade * 27;
+        terrainPixels.data[pixel + 1] = 116 + shade * 83;
+        terrainPixels.data[pixel + 2] = 161 + shade * 77;
+        terrainPixels.data[pixel + 3] = 255;
+      }
+    }
+    terrainContext.putImageData(terrainPixels, 0, 0);
+    terrainContext.lineWidth = 1;
+    terrainContext.strokeStyle = "rgba(220, 251, 255, 0.20)";
+    for (let y = 22; y < terrainCanvas.height; y += 18) {
+      terrainContext.beginPath();
+      for (let x = 0; x <= terrainCanvas.width; x += 8) {
+        const contour = y + Math.sin(x * 0.045 + y * 0.08) * 5 + Math.sin(x * 0.014) * 3;
+        if (x === 0) terrainContext.moveTo(x, contour);
+        else terrainContext.lineTo(x, contour);
+      }
+      terrainContext.stroke();
+    }
+    const terrainTexture = new THREE.CanvasTexture(terrainCanvas);
+    terrainTexture.colorSpace = THREE.SRGBColorSpace;
+    terrainTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const countryGeometry = new THREE.ExtrudeGeometry(shapes, {
+      depth: 0.55,
+      bevelEnabled: true,
+      bevelThickness: 0.1,
+      bevelSize: 0.08,
+      bevelSegments: 3,
+    });
+    // ExtrudeGeometry UVs are in world units; normalize them so the texture spans Thailand once.
+    countryGeometry.computeBoundingBox();
+    const geometryBounds = countryGeometry.boundingBox;
+    const positions = countryGeometry.getAttribute("position");
+    const uvs = countryGeometry.getAttribute("uv");
+    if (geometryBounds && uvs) {
+      const width = geometryBounds.max.x - geometryBounds.min.x;
+      const height = geometryBounds.max.y - geometryBounds.min.y;
+      for (let index = 0; index < positions.count; index++) {
+        uvs.setXY(
+          index,
+          (positions.getX(index) - geometryBounds.min.x) / width,
+          (positions.getY(index) - geometryBounds.min.y) / height,
+        );
+      }
+      uvs.needsUpdate = true;
+    }
+    const country = new THREE.Mesh(countryGeometry, [
+      new THREE.MeshStandardMaterial({
+        map: terrainTexture,
+        color: 0xffffff,
+        emissive: 0x0c5277,
+        emissiveIntensity: 0.2,
+        roughness: 0.55,
+        metalness: 0.12,
       }),
-      [
-        new THREE.MeshStandardMaterial({
-          color: 0x51c9f4,
-          emissive: 0x1686bd,
-          emissiveIntensity: 0.35,
-          roughness: 0.4,
-          metalness: 0.25,
-        }),
-        new THREE.MeshStandardMaterial({ color: 0x5269d7, emissive: 0x253a95, roughness: 0.45 }),
-      ],
-    );
+      new THREE.MeshStandardMaterial({ color: 0x5269d7, emissive: 0x253a95, roughness: 0.45 }),
+    ]);
     country.rotation.x = -Math.PI / 2;
     country.castShadow = true;
     country.receiveShadow = true;
@@ -350,27 +419,40 @@ function ThreeBranchMap({
         1.05,
         -(branch.lat - 13.2),
       );
-      const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(0.14, 0.52, 18),
+      const pinShape = new THREE.Shape();
+      pinShape.moveTo(0, -0.3);
+      pinShape.bezierCurveTo(-0.07, -0.19, -0.19, 0.01, -0.19, 0.15);
+      pinShape.bezierCurveTo(-0.19, 0.36, 0.19, 0.36, 0.19, 0.15);
+      pinShape.bezierCurveTo(0.19, 0.01, 0.07, -0.19, 0, -0.3);
+      const pin = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(pinShape, {
+          depth: 0.1,
+          bevelEnabled: true,
+          bevelSegments: 2,
+          bevelSize: 0.015,
+          bevelThickness: 0.015,
+        }),
         new THREE.MeshStandardMaterial({
-          color: 0xff941c,
-          emissive: branch.hq ? 0x8c2d00 : 0x15508f,
-          emissiveIntensity: 0.65,
+          color: 0xef7628,
+          emissive: 0x7a2600,
+          emissiveIntensity: 0.45,
+          roughness: 0.4,
+          metalness: 0.08,
         }),
       );
-      cone.castShadow = true;
-      cone.rotation.z = Math.PI;
-      group.add(cone);
-      const head = new THREE.Mesh(
-        new THREE.SphereGeometry(0.17, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xff8a3d, emissive: 0x552200 }),
+      pin.position.z = -0.05;
+      pin.castShadow = true;
+      group.add(pin);
+      const pinCenter = new THREE.Mesh(
+        new THREE.CircleGeometry(0.067, 20),
+        new THREE.MeshBasicMaterial({ color: 0x8c2d00, side: THREE.DoubleSide }),
       );
-      head.position.y = 0.28;
-      group.add(head);
+      pinCenter.position.set(0, 0.15, 0.066);
+      group.add(pinCenter);
       const ring = new THREE.Mesh(
         new THREE.RingGeometry(0.18, 0.25, 28),
         new THREE.MeshBasicMaterial({
-          color: 0xff8a3d,
+          color: 0xef7628,
           transparent: true,
           opacity: 0.75,
           side: THREE.DoubleSide,
@@ -382,26 +464,95 @@ function ThreeBranchMap({
       world.add(group);
       return { group, ring };
     });
-    const hub = pins[0].group.position;
-    pins.slice(1).forEach(({ group }) => {
-      const end = group.position;
-      const curve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(hub.x, 0.75, hub.z),
-        new THREE.Vector3((hub.x + end.x) / 2, 1.6, (hub.z + end.z) / 2),
-        new THREE.Vector3(end.x, 0.75, end.z),
-      );
-      world.add(
-        new THREE.Line(
-          new THREE.BufferGeometry().setFromPoints(curve.getPoints(48)),
-          new THREE.LineBasicMaterial({ color: 0x9beaff, transparent: true, opacity: 0.3 }),
-        ),
-      );
-    });
+    const hub = pins.find((pin) => pin.group.userData.id === "phuket")?.group.position;
+    const lightCanvas = document.createElement("canvas");
+    lightCanvas.width = 128;
+    lightCanvas.height = 128;
+    const lightContext = lightCanvas.getContext("2d");
+    if (!lightContext) return;
+    const lightGradient = lightContext.createRadialGradient(64, 64, 0, 64, 64, 64);
+    lightGradient.addColorStop(0, "rgba(255, 255, 255, 0.96)");
+    lightGradient.addColorStop(0.08, "rgba(203, 247, 255, 0.88)");
+    lightGradient.addColorStop(0.28, "rgba(69, 210, 255, 0.36)");
+    lightGradient.addColorStop(0.58, "rgba(44, 185, 255, 0.08)");
+    lightGradient.addColorStop(1, "rgba(44, 185, 255, 0)");
+    lightContext.fillStyle = lightGradient;
+    lightContext.fillRect(0, 0, 128, 128);
+    const lightTexture = new THREE.CanvasTexture(lightCanvas);
+    const routes: {
+      curve: THREE.QuadraticBezierCurve3;
+      pulse: THREE.Group;
+      startedAt: number;
+      duration: number;
+    }[] = [];
+    if (hub)
+      pins
+        .filter(({ group }) => group.userData.id !== "phuket")
+        .forEach(({ group }) => {
+          const end = group.position;
+          const routeLength = hub.distanceTo(end);
+          // Raise longer connections higher so the network reads as a true 3D route map.
+          const arcHeight = THREE.MathUtils.clamp(1.4 + routeLength * 0.18, 1.7, 4.5);
+          const curve = new THREE.QuadraticBezierCurve3(
+            new THREE.Vector3(hub.x, 0.8, hub.z),
+            new THREE.Vector3((hub.x + end.x) / 2, arcHeight, (hub.z + end.z) / 2),
+            new THREE.Vector3(end.x, 0.8, end.z),
+          );
+          world.add(
+            new THREE.Line(
+              new THREE.BufferGeometry().setFromPoints(curve.getPoints(72)),
+              new THREE.LineBasicMaterial({ color: 0x78ddff, transparent: true, opacity: 0.52 }),
+            ),
+          );
+          const pulse = new THREE.Group();
+          const aura = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+              map: lightTexture,
+              color: 0x48d9ff,
+              transparent: true,
+              opacity: 0.56,
+              blending: THREE.AdditiveBlending,
+              depthWrite: false,
+            }),
+          );
+          aura.scale.setScalar(1.28);
+          const glow = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+              map: lightTexture,
+              color: 0xe1fbff,
+              transparent: true,
+              opacity: 0.9,
+              blending: THREE.AdditiveBlending,
+              depthWrite: false,
+            }),
+          );
+          glow.scale.setScalar(0.54);
+          pulse.add(aura, glow);
+          pulse.visible = false;
+          world.add(pulse);
+          routes.push({
+            curve,
+            pulse,
+            // A new route duration is picked for every outgoing signal.
+            startedAt: 0,
+            duration: 1700 + Math.random() * 900,
+          });
+        });
+    const activeRouteIndexes = new Set<number>();
+    let previousRouteIndex = -1;
+    let nextPulseAt = 0;
     const raycaster = new THREE.Raycaster();
     let dragging = false,
       moved = false,
       lastX = 0,
       lastY = 0;
+    const activePointers = new Map<number, { x: number; y: number }>();
+    let pinchDistance = 0;
+    let pinchStartZoom = zoomRef.current;
+    const getPinchDistance = () => {
+      const [first, second] = [...activePointers.values()];
+      return first && second ? Math.hypot(first.x - second.x, first.y - second.y) : 0;
+    };
     const selectPin = (event: MouseEvent) => {
       if (moved) return;
       const rect = canvas.getBoundingClientRect();
@@ -449,15 +600,45 @@ function ThreeBranchMap({
       onZoom(amount);
     };
     const down = (event: PointerEvent) => {
-      if (event.button !== 0) return;
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      canvas.setPointerCapture(event.pointerId);
+      if (activePointers.size === 2) {
+        // Pinching owns the gesture, preventing the second finger from panning the map.
+        zoomAnchor = null;
+        dragging = false;
+        moved = true;
+        pinchDistance = getPinchDistance();
+        pinchStartZoom = zoomRef.current;
+        return;
+      }
+      if (activePointers.size > 2) return;
       zoomAnchor = null;
       dragging = true;
       moved = false;
       lastX = event.clientX;
       lastY = event.clientY;
-      canvas.setPointerCapture(event.pointerId);
     };
     const move = (event: PointerEvent) => {
+      if (activePointers.has(event.pointerId)) {
+        activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      }
+      if (activePointers.size >= 2) {
+        event.preventDefault();
+        const distance = getPinchDistance();
+        if (!pinchDistance || !distance) return;
+        const nextZoom = THREE.MathUtils.clamp(
+          pinchStartZoom * (distance / pinchDistance),
+          0.78,
+          3,
+        );
+        const amount = nextZoom - zoomRef.current;
+        if (Math.abs(amount) > 0.003) {
+          zoomRef.current = nextZoom;
+          onZoom(amount);
+        }
+        return;
+      }
       if (!dragging) return;
       const dx = event.clientX - lastX,
         dy = event.clientY - lastY;
@@ -479,7 +660,9 @@ function ThreeBranchMap({
       lastX = event.clientX;
       lastY = event.clientY;
     };
-    const up = () => {
+    const up = (event: PointerEvent) => {
+      activePointers.delete(event.pointerId);
+      if (activePointers.size < 2) pinchDistance = 0;
       dragging = false;
     };
     canvas.addEventListener("wheel", wheel, { passive: false });
@@ -508,6 +691,33 @@ function ThreeBranchMap({
     let viewportKey = "";
     let frame = 0;
     const render = (time: number) => {
+      // Launch closely staggered signals so two or three destinations can glow at once.
+      if (time >= nextPulseAt && activeRouteIndexes.size < 3 && routes.length) {
+        const choices = routes
+          .map((_, index) => index)
+          .filter((index) => !activeRouteIndexes.has(index) && index !== previousRouteIndex);
+        const nextRouteIndex = choices[Math.floor(Math.random() * choices.length)] ?? 0;
+        const route = routes[nextRouteIndex];
+        route.startedAt = time;
+        route.duration = 1650 + Math.random() * 1150;
+        route.pulse.visible = true;
+        activeRouteIndexes.add(nextRouteIndex);
+        previousRouteIndex = nextRouteIndex;
+        nextPulseAt = time + 180 + Math.random() * 280;
+      }
+      activeRouteIndexes.forEach((routeIndex) => {
+        const route = routes[routeIndex];
+        const progress = (time - route.startedAt) / route.duration;
+        if (progress >= 1) {
+          route.pulse.visible = false;
+          activeRouteIndexes.delete(routeIndex);
+        } else {
+          const point = route.curve.getPoint(THREE.MathUtils.smootherstep(progress, 0, 1));
+          route.pulse.position.copy(point);
+          const pulseScale = 0.9 + Math.sin(progress * Math.PI) * 0.5;
+          route.pulse.scale.setScalar(pulseScale);
+        }
+      });
       const selectedPin = pins.find((pin) => pin.group.userData.id === activeBranchRef.current);
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
@@ -634,8 +844,11 @@ function ThreeBranchMap({
           const materials = Array.isArray(object.material) ? object.material : [object.material];
           materials.forEach((material) => material.dispose());
         }
+        if (object instanceof THREE.Sprite) object.material.dispose();
       });
       texture.dispose();
+      terrainTexture.dispose();
+      lightTexture.dispose();
       canvas.removeEventListener("wheel", wheel);
       canvas.removeEventListener("pointerdown", down);
       canvas.removeEventListener("pointermove", move);
